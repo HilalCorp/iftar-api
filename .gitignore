@@ -9,6 +9,7 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .idea/
+*.DotSettings.user
 
 # Fichiers de configuration d'application (possiblement sensibles)
 iftar-api/appsettings.json
