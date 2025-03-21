@@ -1,10 +1,24 @@
+# Répertoires de compilation
 bin/
 obj/
+
+# Répertoire des packages NuGet
 /packages/
+
+# Fichiers et répertoires spécifiques à JetBrains Rider et ReSharper
 riderModule.iml
 /_ReSharper.Caches/
-/iftar-api/appsettings*
-.idea
+.idea/
+
+# Fichiers de configuration d'application (possiblement sensibles)
+iftar-api/appsettings.json
+
+# Fichiers journaux
+*.log
+
+# Autres fichiers spécifiques à Docker ou à l'environnement local
+**/docker-compose.override.yml
+.docker/
 
 ## A streamlined .gitignore for modern .NET projects
 ## including temporary files, build results, and
