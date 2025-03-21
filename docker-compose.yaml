@@ -1,0 +1,40 @@
+services:
+  # API service (Application)
+  api:
+    build:
+      context: .  # Ce chemin doit pointer vers le dossier contenant le Dockerfile
+      dockerfile: Dockerfile # Votre Dockerfile pour l'API
+      args:
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-DEBUG}  # Default to Release if not set
+    ports:
+      - "8080:8080"  # L'API sera accessible sur le port 8080
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development  # Définir l'environnement à "Development"
+    depends_on:
+      - db  # L'API dépend de la base de données, elle démarrera après la DB
+    networks:
+      - app-network  # Les deux services seront sur le même réseau pour communiquer
+
+  # PostgreSQL service (Database)
+  db:
+    image: postgres:13  # Image officielle de PostgreSQL 13
+    container_name: postgres  # Nom du conteneur PostgreSQL
+    environment:
+      - POSTGRES_USER=iftaruser  # Utilisateur de la base de données
+      - POSTGRES_PASSWORD=iftarpassword  # Mot de passe de l'utilisateur
+      - POSTGRES_DB=iftardb  # Nom de la base de données
+    ports:
+      - "5555:5432"  # Le port par défaut de PostgreSQL
+    volumes:
+      - postgres-data:/var/lib/postgresql/data  # Volume persistant pour les données de la base de données
+    networks:
+      - app-network  # Le conteneur de la DB sera sur le même réseau que l'API
+
+# Volumes pour la persistance des données
+volumes:
+  postgres-data:
+
+# Réseau pour que les services puissent communiquer entre eux
+networks:
+  app-network:
+    driver: bridge  # Utilisation du réseau bridge pour la communication entre les services
