@@ -3,7 +3,7 @@
 # Users of PowerShell might encounter issues using 'make' directly in PowerShell.
 # If you're using PowerShell, you may need to run the commands manually or switch
 # to another terminal (like Git Bash or WSL) to use 'make' effectively.
-# 
+#
 # Alternatively, you can copy and paste the individual commands from the Makefile
 # directly into the PowerShell terminal. For example:
 # - To run `make run`, you would type `docker-compose up -d --build`
@@ -15,13 +15,13 @@
 DOCKER_COMPOSE = docker-compose -f docker-compose.yaml
 
 # API container name (adjust this as needed)
-API_CONTAINER = iftar-api
+API_CONTAINER = iftar-api-api-1
 
 # Database container name (adjust this as needed)
 DB_CONTAINER = iftar-db
 
 # Commands
-.PHONY: run restart-all stop rebuild-api migrate remove-migration update-db
+.PHONY: run restart-all stop rebuild-api migrate remove-migration update-db run-dev rapi ami rmi udb
 
 # ------------------------------------------------------
 # Command: run
@@ -72,10 +72,10 @@ rebuild-api:
 # This will ask you to enter the migration name interactively.
 # It runs: dotnet ef migrations add <migration-name>
 # ------------------------------------------------------
-migrate:
-	@echo "Creating a new migration..."
-	@read -p "Enter migration name: " migration_name; \
-	dotnet ef migrations add $$migration_name
+migration:
+	@echo "Creating migration $(MIGRATION_NAME) in the container..."
+	docker exec -it $(API_CONTAINER) bash -c "cd /src/iftar-api && dotnet ef migrations add $(MIGRATION_NAME)"
+	docker cp $(API_CONTAINER):/src/iftar-api/Infrastructure/Data/Migrations ./Infrastructure/Data
 
 # ------------------------------------------------------
 # Command: remove-migration
@@ -85,8 +85,9 @@ migrate:
 # It runs: dotnet ef migrations remove
 # ------------------------------------------------------
 remove-migration:
-	@echo "Removing the last migration..."
-	dotnet ef migrations remove
+	@echo "Removing the last migration in the container..."
+	docker exec -it $(API_CONTAINER) bash -c "cd /src/iftar-api && dotnet ef migrations remove"
+	docker cp $(API_CONTAINER):/src/iftar-api/Migrations ./Migrations
 
 # ------------------------------------------------------
 # Command: update-db
@@ -97,4 +98,15 @@ remove-migration:
 # ------------------------------------------------------
 update-db:
 	@echo "Updating the database..."
-	dotnet ef database update
+	docker exec -it $(API_CONTAINER) bash -c "cd /src/iftar-api && dotnet ef database update"
+
+# ------------------------------------------------------
+# Command: run-dev
+# Description: Starts the containers in development mode with hot reload enabled.
+# Example: make run-dev
+# This will start the containers and monitor changes for hot reload.
+# ------------------------------------------------------
+run-dev:
+	@echo "Starting Docker containers in development mode..."
+	# Start Docker Compose in development mode with hot reload
+	cd .. && $(DOCKER_COMPOSE) up -d --build
