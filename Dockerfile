@@ -1,32 +1,44 @@
-﻿# Base image for runtime environment
+﻿# Étape 1 : Image de base pour l'exécution
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-# Development Stage with SDK (Debug mode, for hot reload)
+# Étape 2 : Configuration du développement avec SDK pour le Hot Reload
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-dev
-ARG BUILD_CONFIGURATION=Debug
 WORKDIR /src
-COPY iftar-api/iftar-api.csproj iftar-api/
-RUN dotnet restore "iftar-api/iftar-api.csproj"
-COPY . .
-WORKDIR "/src/iftar-api"
-RUN dotnet build "iftar-api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+COPY iftar-api/iftar-api.csproj ./iftar-api/
+RUN dotnet restore ./iftar-api/iftar-api.csproj
+COPY . /src/
+WORKDIR /src/iftar-api
+RUN dotnet build ./iftar-api.csproj -c Debug -o /app/build
 
-# Production Stage (Release build)
+# Étape 3 : Étape de production (Release)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-prod
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["iftar-api/iftar-api.csproj", "iftar-api/"]
-RUN dotnet restore "iftar-api/iftar-api.csproj"
-COPY . .
-WORKDIR "/src/iftar-api"
-RUN dotnet publish "iftar-api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+COPY iftar-api/iftar-api.csproj ./iftar-api/
+RUN dotnet restore ./iftar-api/iftar-api.csproj
+COPY . /src/
+WORKDIR /src/iftar-api
+RUN dotnet publish ./iftar-api.csproj -c Release -o /app/publish /p:UseAppHost=false
 
-# Final stage for production or development
+# Étape 4 : Production, copie du code compilé et exécution
 FROM base AS final
 WORKDIR /app
-# Copy from the production build if in production mode or from dev if in development mode
-COPY --from=build-prod /app/publish . 
-# If you want dev build instead, replace `build-prod` with `build-dev`
-ENTRYPOINT ["dotnet", "iftar-api.dll"]
+COPY --from=build-prod /app/publish .
+# Installer dotnet-ef dans l'image de production (si nécessaire pour gérer la base de données en prod)
+RUN dotnet tool install --global dotnet-ef
+# Ajout du répertoire des outils globalement installés à PATH
+ENV PATH="${PATH}:/root/.dotnet/tools"
+CMD ["dotnet", "iftar-api.dll"]
+
+# Étape 5 : Mode Développement avec Hot Reload
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS dev
+WORKDIR /src/iftar-api
+COPY --from=build-dev /app/build .
+COPY . /src/
+# Installer dotnet-ef dans l'image de développement
+RUN dotnet tool install --global dotnet-ef
+# Ajout du répertoire des outils globalement installés à PATH
+ENV PATH="${PATH}:/root/.dotnet/tools"
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
+CMD ["dotnet", "watch", "run", "--no-launch-profile", "--urls", "http://0.0.0.0:8080", "--project", "/src/iftar-api/iftar-api.csproj"]
